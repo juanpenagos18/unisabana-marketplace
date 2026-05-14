@@ -1,19 +1,16 @@
 import { useState, useEffect, useRef, useCallback } from 'react';
 import API from './useApi';
 
-// Genera el sonido de notificación usando Web Audio API (sin archivos externos)
 const playNotificationSound = () => {
   try {
     const ctx = new (window.AudioContext || window.webkitAudioContext)();
     const now = ctx.currentTime;
-
-    // Dos tonos suaves tipo "ping"
     [0, 0.15].forEach((delay, i) => {
       const osc  = ctx.createOscillator();
       const gain = ctx.createGain();
       osc.connect(gain);
       gain.connect(ctx.destination);
-      osc.type      = 'sine';
+      osc.type = 'sine';
       osc.frequency.setValueAtTime(i === 0 ? 880 : 1100, now + delay);
       gain.gain.setValueAtTime(0, now + delay);
       gain.gain.linearRampToValueAtTime(0.3, now + delay + 0.02);
@@ -24,7 +21,6 @@ const playNotificationSound = () => {
   } catch {}
 };
 
-// T47 — Hook que hace polling cada 8s y detecta notificaciones nuevas
 const useNotifications = () => {
   const [notifications, setNotifications] = useState([]);
   const [unreadCount, setUnreadCount]     = useState(0);
@@ -38,7 +34,7 @@ const useNotifications = () => {
       setNotifications(notifs);
       setUnreadCount(count);
 
-      // Suena si hay notificaciones nuevas respecto al último poll
+      // Suena si hay notificaciones nuevas
       if (prevCountRef.current !== null && count > prevCountRef.current) {
         playNotificationSound();
       }
@@ -47,9 +43,25 @@ const useNotifications = () => {
   }, []);
 
   useEffect(() => {
+    // Primera carga inmediata
     fetchNotifications();
-    pollRef.current = setInterval(fetchNotifications, 8000);
-    return () => clearInterval(pollRef.current);
+
+    // Polling cada 5 segundos (antes era 8s)
+    pollRef.current = setInterval(fetchNotifications, 5000);
+
+    // Refresca instantáneamente al volver a la pestaña
+    // (sin recargar la página — solo llama al endpoint)
+    const handleVisibility = () => {
+      if (document.visibilityState === 'visible') {
+        fetchNotifications();
+      }
+    };
+    document.addEventListener('visibilitychange', handleVisibility);
+
+    return () => {
+      clearInterval(pollRef.current);
+      document.removeEventListener('visibilitychange', handleVisibility);
+    };
   }, [fetchNotifications]);
 
   const markAsRead = async (id) => {

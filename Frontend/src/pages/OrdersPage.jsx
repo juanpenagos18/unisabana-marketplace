@@ -25,12 +25,12 @@ const StatusBadge = ({ status }) => {
 const OrdersPage = () => {
   const { user, logout } = useAuth();
   const navigate = useNavigate();
-  const [orders, setOrders]       = useState([]);
-  const [sales, setSales]         = useState([]);
-  const [loading, setLoading]     = useState(true);
-  const [tab, setTab]             = useState('purchases');
-  const [reviewOrder, setReviewOrder] = useState(null); // orden a reseñar
-  const [reviewed, setReviewed]   = useState(new Set()); // IDs de órdenes ya reseñadas
+  const [orders, setOrders]           = useState([]);
+  const [sales, setSales]             = useState([]);
+  const [loading, setLoading]         = useState(true);
+  const [tab, setTab]                 = useState('purchases');
+  const [reviewOrder, setReviewOrder] = useState(null);
+  const [reviewed, setReviewed]       = useState(new Set());
 
   const handleLogout = () => { logout(); navigate('/'); };
 
@@ -57,8 +57,18 @@ const OrdersPage = () => {
     } catch (err) { alert(err.response?.data?.message || 'Error'); }
   };
 
-  const handleReviewSuccess = (orderId) => {
-    setReviewed(prev => new Set([...prev, orderId]));
+  // Chatear con el comprador desde una venta
+  const handleChatWithBuyer = (order) => {
+    const params = new URLSearchParams({
+      contactId:   order.buyer._id,
+      contactName: order.buyer.name,
+    });
+    // Usa el primer producto de la orden como contexto del chat
+    if (order.items?.[0]) {
+      params.append('productId',    order.items[0].product || '');
+      params.append('productTitle', order.items[0].title);
+    }
+    navigate(`/chats/conversation?${params}`);
   };
 
   const displayList = tab === 'purchases' ? orders : sales;
@@ -106,17 +116,21 @@ const OrdersPage = () => {
           <div className="flex flex-col gap-4">
             {displayList.map(order => (
               <div key={order._id} className="card flex flex-col gap-3">
+
+                {/* Header de la orden */}
                 <div className="flex items-start justify-between gap-2">
                   <div>
-                    <p className="text-xs font-mono text-gray-400">#{order._id.slice(-8).toUpperCase()}</p>
+                    <p className="text-xs font-mono text-gray-400">
+                      #{order._id.slice(-8).toUpperCase()}
+                    </p>
                     <p className="text-xs text-gray-400 mt-0.5">
                       {new Date(order.createdAt).toLocaleDateString('es-CO', {
-                        day: '2-digit', month: 'short', year: 'numeric'
+                        day: '2-digit', month: 'short', year: 'numeric',
                       })}
                     </p>
                     {tab === 'sales' && order.buyer && (
                       <p className="text-xs text-gray-500 mt-1">
-                        Comprador: <span className="font-medium">{order.buyer.name}</span>
+                        Comprador: <span className="font-semibold">{order.buyer.name}</span>
                       </p>
                     )}
                   </div>
@@ -135,12 +149,13 @@ const OrdersPage = () => {
                       </div>
                       <div className="flex-1 min-w-0">
                         <p className="text-sm font-medium truncate">{item.title}</p>
-                        {tab === 'purchases' && item.seller && (
-                          <p className="text-xs text-gray-400">Vendedor: {item.seller.name}</p>
-                        )}
+                        <p className="text-xs text-gray-400">
+                          Cantidad: {item.qty || 1}
+                          {tab === 'purchases' && item.seller && ` · Vendedor: ${item.seller.name}`}
+                        </p>
                       </div>
                       <p className="text-sm font-bold flex-shrink-0" style={{ color: 'var(--color-primary)' }}>
-                        ${item.price.toLocaleString('es-CO')}
+                        ${(item.price * (item.qty || 1)).toLocaleString('es-CO')}
                       </p>
                     </div>
                   ))}
@@ -155,12 +170,11 @@ const OrdersPage = () => {
                   </span>
                 </div>
 
-                {/* T46 — Botón reseñar (solo compras entregadas) */}
+                {/* Acciones comprador */}
                 {tab === 'purchases' && order.status === 'Entregada' && !reviewed.has(order._id) && (
                   <button onClick={() => setReviewOrder(order)}
                     className="w-full py-2 rounded-xl text-sm font-semibold transition-colors"
-                    style={{ backgroundColor: '#FEF3C7', color: '#D97706',
-                      border: '1px solid #FDE68A' }}>
+                    style={{ backgroundColor: '#FEF3C7', color: '#D97706', border: '1px solid #FDE68A' }}>
                     ⭐ Calificar vendedor
                   </button>
                 )}
@@ -168,19 +182,36 @@ const OrdersPage = () => {
                   <p className="text-xs text-center text-green-600">✓ Reseña enviada</p>
                 )}
 
-                {/* Cambiar estado (ventas) */}
-                {tab === 'sales' && order.status !== 'Entregada' && order.status !== 'Cancelada' && (
-                  <div className="flex gap-2 pt-1">
-                    <p className="text-xs text-gray-400 self-center mr-1">Cambiar a:</p>
-                    {['Confirmada', 'Entregada', 'Cancelada'].filter(s => s !== order.status).map(s => (
-                      <button key={s} onClick={() => updateStatus(order._id, s)}
-                        className={`text-xs px-3 py-1.5 rounded-xl border font-medium transition-colors
-                          ${s === 'Cancelada'
-                            ? 'border-red-300 text-red-500 hover:bg-red-50'
-                            : 'border-gray-300 text-gray-600 hover:bg-gray-50'}`}>
-                        {STATUS_CONFIG[s].icon} {s}
+                {/* Acciones vendedor */}
+                {tab === 'sales' && (
+                  <div className="flex gap-2 flex-wrap pt-1">
+
+                    {/* Botón chatear con el comprador */}
+                    {order.buyer && (
+                      <button onClick={() => handleChatWithBuyer(order)}
+                        className="text-xs px-3 py-1.5 rounded-xl font-medium transition-colors text-white"
+                        style={{ backgroundColor: 'var(--color-primary)', border: '1px solid var(--color-primary)' }}>
+                        💬 Chatear con comprador
                       </button>
-                    ))}
+                    )}
+
+                    {/* Cambiar estado */}
+                    {order.status !== 'Entregada' && order.status !== 'Cancelada' && (
+                      <>
+                        <p className="text-xs text-gray-400 self-center">Cambiar a:</p>
+                        {['Confirmada', 'Entregada', 'Cancelada']
+                          .filter(s => s !== order.status)
+                          .map(s => (
+                            <button key={s} onClick={() => updateStatus(order._id, s)}
+                              className={`text-xs px-3 py-1.5 rounded-xl border font-medium transition-colors
+                                ${s === 'Cancelada'
+                                  ? 'border-red-300 text-red-500 hover:bg-red-50'
+                                  : 'border-gray-300 text-gray-600 hover:bg-gray-50'}`}>
+                              {STATUS_CONFIG[s].icon} {s}
+                            </button>
+                          ))}
+                      </>
+                    )}
                   </div>
                 )}
               </div>
@@ -189,12 +220,11 @@ const OrdersPage = () => {
         )}
       </div>
 
-      {/* T46 — Modal de reseña */}
       {reviewOrder && (
         <ReviewModal
           order={reviewOrder}
           onClose={() => setReviewOrder(null)}
-          onSuccess={() => handleReviewSuccess(reviewOrder._id)}
+          onSuccess={() => setReviewed(prev => new Set([...prev, reviewOrder._id]))}
         />
       )}
     </Layout>
