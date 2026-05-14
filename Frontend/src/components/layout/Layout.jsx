@@ -1,6 +1,6 @@
 import React from 'react';
-import Header from './Header';
-import Footer from './Footer';
+import Header from "../Header";
+import Footer from "../Footer";
 
 /**
  * Layout global — envuelve todas las páginas con Header + Footer.
