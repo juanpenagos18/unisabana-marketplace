@@ -1,33 +1,40 @@
-import React, { useState, useEffect } from 'react';
-import { useNavigate } from 'react-router-dom';
+import React, { useState, useEffect, useCallback } from 'react';
+import { useNavigate, useSearchParams } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
 import Layout from '../components/layout/Layout';
 import ProductCard from '../components/ProductCard';
+import FilterPanel from '../components/FilterPanel';
+import ActiveFilters from '../components/ActiveFilters';
 import API from '../hooks/useApi';
 
-const CATEGORIES = ['Todas', 'Libros', 'Electrónica', 'Ropa', 'Deportes', 'Hogar', 'Otro'];
-const CONDITIONS = ['Todas', 'Nuevo', 'Usado'];
-
-// T21 — Vista de Galería Principal
 const HomePage = () => {
   const { user, logout } = useAuth();
   const navigate = useNavigate();
+  const [searchParams] = useSearchParams();
 
-  const [products, setProducts]   = useState([]);
-  const [loading, setLoading]     = useState(true);
-  const [search, setSearch]       = useState('');
-  const [category, setCategory]   = useState('Todas');
-  const [condition, setCondition] = useState('Todas');
-  const [page, setPage]           = useState(1);
-  const [pagination, setPagination] = useState({});
+  // Filtros unificados (T28/T30/T32)
+  const [filters, setFilters] = useState({
+    search:    searchParams.get('search') || '',
+    category:  '',
+    condition: '',
+    minPrice:  '',
+    maxPrice:  '',
+  });
+  const [showFilters, setShowFilters] = useState(false);
+  const [products, setProducts]       = useState([]);
+  const [loading, setLoading]         = useState(true);
+  const [page, setPage]               = useState(1);
+  const [pagination, setPagination]   = useState({});
 
-  const fetchProducts = async () => {
+  const fetchProducts = useCallback(async (currentFilters, currentPage) => {
     setLoading(true);
     try {
-      const params = new URLSearchParams({ page, limit: 12 });
-      if (search)                params.append('search',    search);
-      if (category !== 'Todas')  params.append('category',  category);
-      if (condition !== 'Todas') params.append('condition', condition);
+      const params = new URLSearchParams({ page: currentPage, limit: 12 });
+      if (currentFilters.search)    params.append('search',    currentFilters.search);
+      if (currentFilters.category)  params.append('category',  currentFilters.category);
+      if (currentFilters.condition) params.append('condition', currentFilters.condition);
+      if (currentFilters.minPrice)  params.append('minPrice',  currentFilters.minPrice);
+      if (currentFilters.maxPrice)  params.append('maxPrice',  currentFilters.maxPrice);
 
       const res = await API.get(`/products?${params}`);
       setProducts(res.data.products);
@@ -37,61 +44,75 @@ const HomePage = () => {
     } finally {
       setLoading(false);
     }
+  }, []);
+
+  useEffect(() => {
+    fetchProducts(filters, page);
+  }, [filters, page]);
+
+  // T29 — Recibe búsqueda desde el Header
+  const handleSearchFromHeader = (term) => {
+    setFilters(f => ({ ...f, search: term }));
+    setPage(1);
   };
 
-  useEffect(() => { fetchProducts(); }, [page, category, condition]);
-
-  // Buscar al presionar Enter
-  const handleSearch = (e) => {
-    if (e.key === 'Enter') { setPage(1); fetchProducts(); }
+  const handleFiltersChange = (newFilters) => {
+    setFilters(f => ({ ...f, ...newFilters }));
+    setPage(1);
   };
+
+  // T33 — Remover filtro individual
+  const handleRemoveFilter = (key) => {
+    setFilters(f => ({ ...f, [key]: '' }));
+    setPage(1);
+  };
+
+  const activeFilterCount = [filters.category, filters.condition, filters.minPrice, filters.maxPrice]
+    .filter(Boolean).length;
 
   const handleLogout = () => { logout(); navigate('/'); };
 
   return (
-    <Layout user={user} onLogout={handleLogout}>
-      <div className="flex flex-col gap-5">
+    <Layout user={user} onLogout={handleLogout} onSearch={handleSearchFromHeader}>
+      <div className="flex flex-col gap-4">
 
-        {/* Barra de búsqueda + botón publicar */}
+        {/* Barra secundaria: filtros y publicar */}
         <div className="flex gap-2 items-center">
-          <input
-            value={search}
-            onChange={e => setSearch(e.target.value)}
-            onKeyDown={handleSearch}
-            placeholder="Buscar productos... (Enter)"
-            className="input-base flex-1"
-          />
-          <button onClick={() => navigate('/products/new')} className="btn-primary whitespace-nowrap">
+          {/* T31 — Botón abrir panel de filtros */}
+          <button onClick={() => setShowFilters(true)}
+            className="flex items-center gap-2 btn-secondary text-sm relative">
+            <span>⚙ Filtros</span>
+            {activeFilterCount > 0 && (
+              <span className="absolute -top-1.5 -right-1.5 w-4 h-4 rounded-full text-[10px] font-bold
+                text-white flex items-center justify-center"
+                style={{ backgroundColor: 'var(--color-primary)' }}>
+                {activeFilterCount}
+              </span>
+            )}
+          </button>
+
+          <div className="flex-1" />
+
+          <button onClick={() => navigate('/products/new')} className="btn-primary text-sm">
             + Publicar
           </button>
         </div>
 
-        {/* Filtros */}
-        <div className="flex gap-2 flex-wrap">
-          {CATEGORIES.map(cat => (
-            <button key={cat}
-              onClick={() => { setCategory(cat); setPage(1); }}
-              className={`px-3 py-1 rounded-full text-xs font-semibold border transition-colors
-                ${category === cat
-                  ? 'text-white border-transparent'
-                  : 'bg-white border-gray-300 text-gray-600 hover:border-gray-400'}`}
-              style={category === cat ? { backgroundColor: 'var(--color-primary)', borderColor: 'var(--color-primary)' } : {}}>
-              {cat}
-            </button>
-          ))}
-          <span className="w-px bg-gray-200 mx-1" />
-          {CONDITIONS.map(cond => (
-            <button key={cond}
-              onClick={() => { setCondition(cond); setPage(1); }}
-              className={`px-3 py-1 rounded-full text-xs font-semibold border transition-colors
-                ${condition === cond
-                  ? 'text-white border-transparent'
-                  : 'bg-white border-gray-300 text-gray-600 hover:border-gray-400'}`}
-              style={condition === cond ? { backgroundColor: 'var(--color-accent)', borderColor: 'var(--color-accent)' } : {}}>
-              {cond}
-            </button>
-          ))}
-        </div>
+        {/* T33 — Etiquetas de filtros activos */}
+        <ActiveFilters
+          filters={filters}
+          total={pagination.total || 0}
+          onRemove={handleRemoveFilter}
+        />
+
+        {/* T31 — Panel de filtros */}
+        {showFilters && (
+          <FilterPanel
+            filters={filters}
+            onChange={handleFiltersChange}
+            onClose={() => setShowFilters(false)}
+          />
+        )}
 
         {/* Galería */}
         {loading ? (
@@ -103,11 +124,22 @@ const HomePage = () => {
           </div>
         ) : products.length === 0 ? (
           <div className="text-center py-16 flex flex-col items-center gap-3">
-            <span className="text-6xl">🛍️</span>
-            <p className="text-gray-500">No hay productos disponibles.</p>
-            <button onClick={() => navigate('/products/new')} className="btn-primary">
-              Sé el primero en publicar
-            </button>
+            <span className="text-6xl">🔍</span>
+            <p className="text-gray-500">
+              {filters.search || activeFilterCount > 0
+                ? 'No se encontraron productos con esos filtros.'
+                : 'No hay productos disponibles.'}
+            </p>
+            {(filters.search || activeFilterCount > 0) ? (
+              <button onClick={() => setFilters({ search: '', category: '', condition: '', minPrice: '', maxPrice: '' })}
+                className="btn-secondary">
+                Limpiar filtros
+              </button>
+            ) : (
+              <button onClick={() => navigate('/products/new')} className="btn-primary">
+                Sé el primero en publicar
+              </button>
+            )}
           </div>
         ) : (
           <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-4">

@@ -1,81 +1,70 @@
-import React from 'react';
-import { Link, useNavigate } from 'react-router-dom';
+import React, { useState } from 'react';
+import { useNavigate, useLocation } from 'react-router-dom';
 
-// SVG del escudo/logo simplificado de La Sabana (representación institucional)
-const SabanaLogo = () => (
-  <svg width="32" height="32" viewBox="0 0 32 32" fill="none" xmlns="http://www.w3.org/2000/svg">
-    <circle cx="16" cy="16" r="15" fill="#C9A84C" stroke="#fff" strokeWidth="1" />
-    <text x="16" y="21" textAnchor="middle" fill="#1B2D6B" fontSize="13" fontWeight="bold" fontFamily="serif">S</text>
-  </svg>
-);
-
-const Header = ({ user = null, onLogout }) => {
+// T29 — Barra de búsqueda en el header azul
+const Header = ({ user, onLogout, onSearch }) => {
   const navigate = useNavigate();
+  const location = useLocation();
+  const inHome   = location.pathname === '/home';
+  const [query, setQuery] = useState('');
+
+  const handleSearch = (e) => {
+    if (e.key === 'Enter' && query.trim()) {
+      if (inHome) {
+        onSearch?.(query.trim());
+      } else {
+        navigate(`/home?search=${encodeURIComponent(query.trim())}`);
+      }
+    }
+  };
 
   return (
-    <header className="app-header sticky top-0 z-50 shadow-md">
-      {/* Logo + Nombre */}
-      <Link to="/" className="flex items-center gap-2 no-underline">
-        <SabanaLogo />
-        <div className="flex flex-col leading-none">
-          <span className="text-xs font-light text-blue-200 tracking-widest uppercase">
-            Universidad de La Sabana
+    <header className="w-full sticky top-0 z-50 shadow-md"
+      style={{ backgroundColor: 'var(--color-primary)' }}>
+      <div className="max-w-5xl mx-auto px-4 py-3 flex items-center gap-3">
+
+        {/* Logo */}
+        <button onClick={() => navigate('/home')} className="flex items-center gap-2 flex-shrink-0">
+          <div className="w-8 h-8 rounded-full flex items-center justify-center"
+            style={{ backgroundColor: 'var(--color-accent)' }}>
+            <span className="text-white font-bold text-sm font-serif">S</span>
+          </div>
+          <span className="text-white font-bold text-sm hidden sm:block tracking-tight">
+            UniSabana Market
           </span>
-          <span className="text-base font-bold text-white tracking-tight">
-            MarketPlace
-          </span>
+        </button>
+
+        {/* T29 — Barra de búsqueda en el header */}
+        <div className="flex-1 relative">
+          <input
+            value={query}
+            onChange={e => setQuery(e.target.value)}
+            onKeyDown={handleSearch}
+            placeholder="Buscar productos..."
+            className="w-full rounded-xl px-4 py-2 text-sm outline-none pr-10"
+            style={{ backgroundColor: 'rgba(255,255,255,0.15)', color: 'white',
+              border: '1px solid rgba(255,255,255,0.25)' }}
+          />
+          <span className="absolute right-3 top-1/2 -translate-y-1/2 text-white/60 text-sm">⌕</span>
         </div>
-      </Link>
 
-      {/* Acciones del Header */}
-      <div className="flex items-center gap-3">
+        {/* Navegación */}
         {user ? (
-          <>
-            {/* Avatar del usuario */}
-            <button
-              onClick={() => navigate('/profile')}
-              className="flex items-center gap-2 text-white text-sm font-medium hover:opacity-80 transition-opacity"
-            >
-              {user.photo ? (
-                <img
-                  src={user.photo}
-                  alt={user.name}
-                  className="w-8 h-8 rounded-full object-cover border-2 border-white/40"
-                />
-              ) : (
-                <div className="w-8 h-8 rounded-full bg-white/20 flex items-center justify-center text-sm font-bold">
-                  {user.name?.charAt(0).toUpperCase()}
-                </div>
-              )}
-              <span className="hidden sm:inline">{user.name}</span>
+          <div className="flex items-center gap-2 flex-shrink-0">
+            <button onClick={() => navigate('/my-products')}
+              className="text-white/80 hover:text-white text-xs hidden sm:block transition-colors">
+              Mis productos
             </button>
-
-            <button
-              onClick={onLogout}
-              className="text-white/70 hover:text-white text-xs transition-colors"
-            >
-              Salir
-            </button>
-          </>
-        ) : (
-          <div className="flex items-center gap-2">
-            <button
-              onClick={() => navigate('/login')}
-              className="text-white text-sm font-medium hover:opacity-80 transition-opacity"
-            >
-              Ingresar
-            </button>
-            <button
-              onClick={() => navigate('/register')}
-              className="px-3 py-1 rounded-lg text-sm font-semibold transition-all duration-200 active:scale-95"
-              style={{
-                backgroundColor: 'var(--color-accent)',
-                color: '#1B2D6B',
-              }}
-            >
-              Registrarse
+            <button onClick={() => navigate('/profile')}
+              className="w-8 h-8 rounded-full flex items-center justify-center font-bold text-sm text-white flex-shrink-0"
+              style={{ backgroundColor: 'var(--color-accent)' }}>
+              {user.name?.charAt(0).toUpperCase()}
             </button>
           </div>
+        ) : (
+          <button onClick={() => navigate('/login')} className="btn-primary text-xs flex-shrink-0">
+            Ingresar
+          </button>
         )}
       </div>
     </header>

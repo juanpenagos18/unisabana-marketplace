@@ -4,7 +4,10 @@ import { useAuth } from '../context/AuthContext';
 import Layout from '../components/layout/Layout';
 import API from '../hooks/useApi';
 
-const CATEGORIES = ['Libros', 'Electrónica', 'Ropa', 'Deportes', 'Hogar', 'Otro'];
+const CATEGORIES = [
+  'Académico', 'Tecnología', 'Hogar', 'Moda', 'Comida',
+  'Transporte', 'Entretenimiento', 'Deporte', 'Cuidado Personal', 'Servicios', 'Otros'
+];
 
 // T25 — Interfaz de edición de producto
 const EditProductPage = () => {
