@@ -11,11 +11,11 @@ const ProductDetailPage = () => {
   const { user, logout } = useAuth();
   const { addItem, isInCart } = useCart();
 
-  const [product, setProduct] = useState(null);
-  const [loading, setLoading] = useState(true);
+  const [product, setProduct]   = useState(null);
+  const [loading, setLoading]   = useState(true);
   const [imgIndex, setImgIndex] = useState(0);
-  const [added, setAdded]     = useState(false);
-  const [error, setError]     = useState('');
+  const [added, setAdded]       = useState(false);
+  const [error, setError]       = useState('');
 
   useEffect(() => {
     const fetch = async () => {
@@ -29,13 +29,25 @@ const ProductDetailPage = () => {
   }, [id]);
 
   const handleLogout = () => { logout(); navigate('/'); };
-  const isOwner = user && product && user.id === product.seller?._id;
+  const isOwner = user && product && (user.id === product.seller?._id || user.id === product.seller?._id?.toString());
   const inCart  = product ? isInCart(product._id) : false;
 
   const handleAddToCart = () => {
     addItem(product);
     setAdded(true);
     setTimeout(() => setAdded(false), 2000);
+  };
+
+  // T43 — Abrir chat con el vendedor desde el detalle del producto
+  const handleContact = () => {
+    if (!user) { navigate('/login'); return; }
+    const params = new URLSearchParams({
+      contactId:    product.seller._id,
+      contactName:  product.seller.name,
+      productId:    product._id,
+      productTitle: product.title,
+    });
+    navigate(`/chats/conversation?${params}`);
   };
 
   if (loading) return (
@@ -83,7 +95,7 @@ const ProductDetailPage = () => {
               {imgs.map((src, i) => (
                 <img key={i} src={src} alt="" onClick={() => setImgIndex(i)}
                   className={`w-14 h-14 object-cover rounded-lg cursor-pointer flex-shrink-0
-                    ${i === imgIndex ? 'opacity-100 ring-2 ring-blue-600' : 'opacity-60'}`} />
+                    ${i === imgIndex ? 'opacity-100 ring-2 ring-blue-700' : 'opacity-60'}`} />
               ))}
             </div>
           )}
@@ -119,23 +131,38 @@ const ProductDetailPage = () => {
               <p className="font-semibold text-sm">{product.seller.name}</p>
               <p className="text-xs text-gray-400">{product.seller.career || 'Estudiante'}</p>
             </div>
+            <div className="flex text-yellow-400 text-sm">
+              {'★'.repeat(Math.round(product.seller.reputation || 0))}
+              {'☆'.repeat(5 - Math.round(product.seller.reputation || 0))}
+            </div>
           </div>
         )}
 
         {/* Acciones */}
-        <div className="flex gap-3">
-          <button onClick={() => navigate('/home')} className="btn-secondary flex-1">← Volver</button>
-          {isOwner ? (
-            <button onClick={() => navigate(`/products/${id}/edit`)} className="btn-primary flex-1">Editar</button>
-          ) : (
-            <button onClick={inCart ? () => navigate('/cart') : handleAddToCart}
-              className="flex-1 py-3 rounded-2xl font-bold text-base transition-all"
-              style={{ backgroundColor: inCart || added ? '#10B981' : 'white',
-                border: '2px solid black',
-                color: inCart || added ? 'white' : 'black' }}>
-              {inCart ? '✓ Ver carrito' : added ? '✓ Agregado' : '🛒 Agregar al carrito'}
+        <div className="flex flex-col gap-3">
+          {!isOwner && (
+            <div className="flex gap-3">
+              <button onClick={inCart ? () => navigate('/cart') : handleAddToCart}
+                className="flex-1 py-3 rounded-2xl font-bold text-sm transition-all"
+                style={{ backgroundColor: inCart || added ? '#10B981' : 'white',
+                  border: '2px solid black',
+                  color: inCart || added ? 'white' : 'black' }}>
+                {inCart ? '✓ Ver carrito' : added ? '✓ Agregado' : '🛒 Agregar al carrito'}
+              </button>
+              {/* T43 — Botón que abre el chat con el vendedor */}
+              <button onClick={handleContact}
+                className="flex-1 py-3 rounded-2xl font-bold text-sm transition-colors text-white"
+                style={{ backgroundColor: 'var(--color-primary)', border: '2px solid black' }}>
+                💬 Chatear
+              </button>
+            </div>
+          )}
+          {isOwner && (
+            <button onClick={() => navigate(`/products/${id}/edit`)} className="btn-primary w-full">
+              Editar producto
             </button>
           )}
+          <button onClick={() => navigate('/home')} className="btn-secondary w-full">← Volver</button>
         </div>
       </div>
     </Layout>

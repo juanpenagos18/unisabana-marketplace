@@ -4,11 +4,12 @@ const cors      = require('cors');
 const morgan    = require('morgan');
 const connectDB = require('./config/db');
 
-const healthRoutes  = require('./routes/health');
-const authRoutes    = require('./routes/auth');
-const userRoutes    = require('./routes/users');
-const productRoutes = require('./routes/products');
-const orderRoutes   = require('./routes/orders');   // T36-T39
+const healthRoutes   = require('./routes/health');
+const authRoutes     = require('./routes/auth');
+const userRoutes     = require('./routes/users');
+const productRoutes  = require('./routes/products');
+const orderRoutes    = require('./routes/orders');
+const messageRoutes  = require('./routes/messages');  // T40-T44
 
 const app  = express();
 const PORT = process.env.PORT || 3000;
@@ -21,7 +22,8 @@ app.use('/api',          healthRoutes);
 app.use('/api/auth',     authRoutes);
 app.use('/api/users',    userRoutes);
 app.use('/api/products', productRoutes);
-app.use('/api/orders',   orderRoutes);   // NUEVO
+app.use('/api/orders',   orderRoutes);
+app.use('/api/messages', messageRoutes);  // NUEVO
 
 app.use((req, res) => res.status(404).json({ error: 'Ruta no encontrada' }));
 app.use((err, req, res, next) => {

@@ -11,8 +11,10 @@ import NewProductPage    from './pages/NewProductPage';
 import ProductDetailPage from './pages/ProductDetailPage';
 import MyProductsPage    from './pages/MyProductsPage';
 import EditProductPage   from './pages/EditProductPage';
-import CartPage          from './pages/CartPage';      // T35
-import OrdersPage        from './pages/OrdersPage';    // T39
+import CartPage          from './pages/CartPage';
+import OrdersPage        from './pages/OrdersPage';
+import ChatsPage         from './pages/ChatsPage';           // T42
+import ConversationPage  from './pages/ConversationPage';    // T43
 
 const PrivateRoute = ({ children }) => {
   const { token, loading } = useAuth();
@@ -37,6 +39,9 @@ function App() {
 
       <Route path="/cart"   element={<PrivateRoute><CartPage /></PrivateRoute>} />
       <Route path="/orders" element={<PrivateRoute><OrdersPage /></PrivateRoute>} />
+
+      <Route path="/chats"                element={<PrivateRoute><ChatsPage /></PrivateRoute>} />
+      <Route path="/chats/conversation"   element={<PrivateRoute><ConversationPage /></PrivateRoute>} />
 
       <Route path="*" element={<Navigate to="/" replace />} />
     </Routes>
