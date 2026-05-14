@@ -10,8 +10,10 @@ const userRoutes         = require('./routes/users');
 const productRoutes      = require('./routes/products');
 const orderRoutes        = require('./routes/orders');
 const messageRoutes      = require('./routes/messages');
-const reviewRoutes       = require('./routes/reviews');        // T45
-const notificationRoutes = require('./routes/notifications'); // T47
+const reviewRoutes       = require('./routes/reviews');
+const notificationRoutes = require('./routes/notifications');
+const reportRoutes       = require('./routes/reports');   // T48
+const adminRoutes        = require('./routes/admin');     // T49/T50
 
 const app  = express();
 const PORT = process.env.PORT || 3000;
@@ -26,8 +28,10 @@ app.use('/api/users',         userRoutes);
 app.use('/api/products',      productRoutes);
 app.use('/api/orders',        orderRoutes);
 app.use('/api/messages',      messageRoutes);
-app.use('/api/reviews',       reviewRoutes);        // NUEVO
-app.use('/api/notifications', notificationRoutes); // NUEVO
+app.use('/api/reviews',       reviewRoutes);
+app.use('/api/notifications', notificationRoutes);
+app.use('/api/reports',       reportRoutes);   // NUEVO
+app.use('/api/admin',         adminRoutes);    // NUEVO
 
 app.use((req, res) => res.status(404).json({ error: 'Ruta no encontrada' }));
 app.use((err, req, res, next) => {

@@ -3,6 +3,7 @@ import { useParams, useNavigate } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
 import { useCart } from '../context/CartContext';
 import Layout from '../components/layout/Layout';
+import ReportModal from '../components/ReportModal';
 import API from '../hooks/useApi';
 
 const ProductDetailPage = () => {
@@ -11,11 +12,12 @@ const ProductDetailPage = () => {
   const { user, logout } = useAuth();
   const { addItem, isInCart } = useCart();
 
-  const [product, setProduct]   = useState(null);
-  const [loading, setLoading]   = useState(true);
-  const [imgIndex, setImgIndex] = useState(0);
-  const [added, setAdded]       = useState(false);
-  const [error, setError]       = useState('');
+  const [product, setProduct]     = useState(null);
+  const [loading, setLoading]     = useState(true);
+  const [imgIndex, setImgIndex]   = useState(0);
+  const [added, setAdded]         = useState(false);
+  const [error, setError]         = useState('');
+  const [showReport, setShowReport] = useState(false);
 
   useEffect(() => {
     const fetch = async () => {
@@ -29,23 +31,16 @@ const ProductDetailPage = () => {
   }, [id]);
 
   const handleLogout = () => { logout(); navigate('/'); };
-  const isOwner = user && product && (user.id === product.seller?._id || user.id === product.seller?._id?.toString());
+  const isOwner = user && product && (user.id === product.seller?._id?.toString());
   const inCart  = product ? isInCart(product._id) : false;
 
-  const handleAddToCart = () => {
-    addItem(product);
-    setAdded(true);
-    setTimeout(() => setAdded(false), 2000);
-  };
+  const handleAddToCart = () => { addItem(product); setAdded(true); setTimeout(() => setAdded(false), 2000); };
 
-  // T43 — Abrir chat con el vendedor desde el detalle del producto
   const handleContact = () => {
     if (!user) { navigate('/login'); return; }
     const params = new URLSearchParams({
-      contactId:    product.seller._id,
-      contactName:  product.seller.name,
-      productId:    product._id,
-      productTitle: product.title,
+      contactId: product.seller._id, contactName: product.seller.name,
+      productId: product._id, productTitle: product.title,
     });
     navigate(`/chats/conversation?${params}`);
   };
@@ -145,13 +140,11 @@ const ProductDetailPage = () => {
               <button onClick={inCart ? () => navigate('/cart') : handleAddToCart}
                 className="flex-1 py-3 rounded-2xl font-bold text-sm transition-all"
                 style={{ backgroundColor: inCart || added ? '#10B981' : 'white',
-                  border: '2px solid black',
-                  color: inCart || added ? 'white' : 'black' }}>
+                  border: '2px solid black', color: inCart || added ? 'white' : 'black' }}>
                 {inCart ? '✓ Ver carrito' : added ? '✓ Agregado' : '🛒 Agregar al carrito'}
               </button>
-              {/* T43 — Botón que abre el chat con el vendedor */}
               <button onClick={handleContact}
-                className="flex-1 py-3 rounded-2xl font-bold text-sm transition-colors text-white"
+                className="flex-1 py-3 rounded-2xl font-bold text-sm text-white transition-colors"
                 style={{ backgroundColor: 'var(--color-primary)', border: '2px solid black' }}>
                 💬 Chatear
               </button>
@@ -162,9 +155,29 @@ const ProductDetailPage = () => {
               Editar producto
             </button>
           )}
-          <button onClick={() => navigate('/home')} className="btn-secondary w-full">← Volver</button>
+
+          <div className="flex gap-3">
+            <button onClick={() => navigate('/home')} className="btn-secondary flex-1">← Volver</button>
+            {/* T48 — Botón reportar (solo si no es el dueño y está logueado) */}
+            {user && !isOwner && (
+              <button onClick={() => setShowReport(true)}
+                className="flex-1 py-2 rounded-xl text-xs font-medium text-gray-400 border border-gray-200
+                  hover:text-red-500 hover:border-red-200 hover:bg-red-50 transition-colors">
+                🚩 Reportar
+              </button>
+            )}
+          </div>
         </div>
       </div>
+
+      {/* T48 — Modal de reporte */}
+      {showReport && (
+        <ReportModal
+          targetId={product._id}
+          targetType="product"
+          onClose={() => setShowReport(false)}
+        />
+      )}
     </Layout>
   );
 };
