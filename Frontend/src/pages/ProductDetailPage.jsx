@@ -15,6 +15,7 @@ const ProductDetailPage = () => {
   const [product, setProduct]     = useState(null);
   const [loading, setLoading]     = useState(true);
   const [imgIndex, setImgIndex]   = useState(0);
+  const [qty, setQty]             = useState(1);
   const [added, setAdded]         = useState(false);
   const [error, setError]         = useState('');
   const [showReport, setShowReport] = useState(false);
@@ -34,7 +35,11 @@ const ProductDetailPage = () => {
   const isOwner = user && product && (user.id === product.seller?._id?.toString());
   const inCart  = product ? isInCart(product._id) : false;
 
-  const handleAddToCart = () => { addItem(product); setAdded(true); setTimeout(() => setAdded(false), 2000); };
+  const handleAddToCart = () => {
+    addItem({ ...product, selectedQty: qty });
+    setAdded(true);
+    setTimeout(() => setAdded(false), 2000);
+  };
 
   const handleContact = () => {
     if (!user) { navigate('/login'); return; }
@@ -63,7 +68,8 @@ const ProductDetailPage = () => {
     </Layout>
   );
 
-  const imgs = product.images?.length ? product.images : [];
+  const imgs  = product.images?.length ? product.images : [];
+  const stock = product.stock || 1;
 
   return (
     <Layout user={user} onLogout={handleLogout}>
@@ -78,19 +84,19 @@ const ProductDetailPage = () => {
               : <span className="text-8xl">📦</span>}
             {imgs.length > 1 && (
               <>
-                <button onClick={() => setImgIndex(i => (i - 1 + imgs.length) % imgs.length)}
+                <button onClick={() => setImgIndex(i => (i-1+imgs.length)%imgs.length)}
                   className="absolute left-2 w-8 h-8 rounded-full bg-white/80 flex items-center justify-center shadow">‹</button>
-                <button onClick={() => setImgIndex(i => (i + 1) % imgs.length)}
+                <button onClick={() => setImgIndex(i => (i+1)%imgs.length)}
                   className="absolute right-2 w-8 h-8 rounded-full bg-white/80 flex items-center justify-center shadow">›</button>
               </>
             )}
           </div>
           {imgs.length > 1 && (
             <div className="flex gap-2 p-3 overflow-x-auto">
-              {imgs.map((src, i) => (
+              {imgs.map((src,i) => (
                 <img key={i} src={src} alt="" onClick={() => setImgIndex(i)}
                   className={`w-14 h-14 object-cover rounded-lg cursor-pointer flex-shrink-0
-                    ${i === imgIndex ? 'opacity-100 ring-2 ring-blue-700' : 'opacity-60'}`} />
+                    ${i===imgIndex ? 'opacity-100 ring-2 ring-blue-700' : 'opacity-60'}`} />
               ))}
             </div>
           )}
@@ -102,7 +108,7 @@ const ProductDetailPage = () => {
             <h1 className="text-xl font-bold" style={{ color: 'var(--color-primary)',
               fontFamily: 'Playfair Display, serif' }}>{product.title}</h1>
             <span className={`flex-shrink-0 text-xs font-bold px-2 py-1 rounded-full
-              ${product.condition === 'Nuevo' ? 'bg-green-100 text-green-700' : 'bg-orange-100 text-orange-700'}`}>
+              ${product.condition==='Nuevo' ? 'bg-green-100 text-green-700' : 'bg-orange-100 text-orange-700'}`}>
               {product.condition}
             </span>
           </div>
@@ -110,45 +116,68 @@ const ProductDetailPage = () => {
             ${product.price.toLocaleString('es-CO')}
           </p>
           <p className="text-sm text-gray-500">{product.category}</p>
+          {/* Stock disponible */}
+          <p className="text-sm font-medium">
+            <span className={stock > 0 ? 'text-green-600' : 'text-red-500'}>
+              {stock > 0 ? `✓ ${stock} disponible${stock !== 1 ? 's' : ''}` : '✗ Sin stock'}
+            </span>
+          </p>
           <p className="text-sm leading-relaxed" style={{ color: 'var(--color-text)' }}>
             {product.description}
           </p>
         </div>
 
-        {/* Vendedor */}
+        {/* Vendedor — clic navega a su página */}
         {product.seller && (
-          <div className="card flex items-center gap-3">
+          <button onClick={() => navigate(`/seller/${product.seller._id}`)}
+            className="card flex items-center gap-3 text-left hover:shadow-md transition-shadow w-full">
             <div className="w-10 h-10 rounded-full flex items-center justify-center font-bold text-white"
               style={{ backgroundColor: 'var(--color-primary)' }}>
               {product.seller.name?.charAt(0).toUpperCase()}
             </div>
             <div className="flex-1">
               <p className="font-semibold text-sm">{product.seller.name}</p>
-              <p className="text-xs text-gray-400">{product.seller.career || 'Estudiante'}</p>
+              <p className="text-xs text-gray-400">{product.seller.career || 'Estudiante'} · Ver perfil →</p>
             </div>
             <div className="flex text-yellow-400 text-sm">
-              {'★'.repeat(Math.round(product.seller.reputation || 0))}
-              {'☆'.repeat(5 - Math.round(product.seller.reputation || 0))}
+              {'★'.repeat(Math.round(product.seller.reputation||0))}
+              {'☆'.repeat(5-Math.round(product.seller.reputation||0))}
             </div>
-          </div>
+          </button>
         )}
 
         {/* Acciones */}
         <div className="flex flex-col gap-3">
-          {!isOwner && (
-            <div className="flex gap-3">
-              <button onClick={inCart ? () => navigate('/cart') : handleAddToCart}
-                className="flex-1 py-3 rounded-2xl font-bold text-sm transition-all"
-                style={{ backgroundColor: inCart || added ? '#10B981' : 'white',
-                  border: '2px solid black', color: inCart || added ? 'white' : 'black' }}>
-                {inCart ? '✓ Ver carrito' : added ? '✓ Agregado' : '🛒 Agregar al carrito'}
-              </button>
-              <button onClick={handleContact}
-                className="flex-1 py-3 rounded-2xl font-bold text-sm text-white transition-colors"
-                style={{ backgroundColor: 'var(--color-primary)', border: '2px solid black' }}>
-                💬 Chatear
-              </button>
-            </div>
+          {!isOwner && stock > 0 && (
+            <>
+              {/* Selector de cantidad */}
+              <div className="flex items-center gap-3">
+                <p className="text-sm font-medium text-gray-600">Cantidad:</p>
+                <div className="flex items-center gap-2 rounded-xl overflow-hidden"
+                  style={{ border: '1px solid var(--color-border)' }}>
+                  <button onClick={() => setQty(q => Math.max(1, q-1))}
+                    className="w-9 h-9 flex items-center justify-center text-lg font-bold hover:bg-gray-100 transition-colors">−</button>
+                  <span className="w-10 text-center font-semibold text-sm">{qty}</span>
+                  <button onClick={() => setQty(q => Math.min(stock, q+1))}
+                    className="w-9 h-9 flex items-center justify-center text-lg font-bold hover:bg-gray-100 transition-colors">+</button>
+                </div>
+                <p className="text-xs text-gray-400">de {stock}</p>
+              </div>
+
+              <div className="flex gap-3">
+                <button onClick={inCart ? () => navigate('/cart') : handleAddToCart}
+                  className="flex-1 py-3 rounded-2xl font-bold text-sm transition-all"
+                  style={{ backgroundColor: inCart||added ? '#10B981' : 'white',
+                    border: '2px solid black', color: inCart||added ? 'white' : 'black' }}>
+                  {inCart ? '✓ Ver carrito' : added ? '✓ Agregado' : `🛒 Agregar (${qty})`}
+                </button>
+                <button onClick={handleContact}
+                  className="flex-1 py-3 rounded-2xl font-bold text-sm text-white"
+                  style={{ backgroundColor: 'var(--color-primary)', border: '2px solid black' }}>
+                  💬 Chatear
+                </button>
+              </div>
+            </>
           )}
           {isOwner && (
             <button onClick={() => navigate(`/products/${id}/edit`)} className="btn-primary w-full">
@@ -158,7 +187,6 @@ const ProductDetailPage = () => {
 
           <div className="flex gap-3">
             <button onClick={() => navigate('/home')} className="btn-secondary flex-1">← Volver</button>
-            {/* T48 — Botón reportar (solo si no es el dueño y está logueado) */}
             {user && !isOwner && (
               <button onClick={() => setShowReport(true)}
                 className="flex-1 py-2 rounded-xl text-xs font-medium text-gray-400 border border-gray-200
@@ -170,13 +198,8 @@ const ProductDetailPage = () => {
         </div>
       </div>
 
-      {/* T48 — Modal de reporte */}
       {showReport && (
-        <ReportModal
-          targetId={product._id}
-          targetType="product"
-          onClose={() => setShowReport(false)}
-        />
+        <ReportModal targetId={product._id} targetType="product" onClose={() => setShowReport(false)} />
       )}
     </Layout>
   );

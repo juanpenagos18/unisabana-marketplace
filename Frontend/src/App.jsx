@@ -15,8 +15,9 @@ import CartPage          from './pages/CartPage';
 import OrdersPage        from './pages/OrdersPage';
 import ChatsPage         from './pages/ChatsPage';
 import ConversationPage  from './pages/ConversationPage';
-import AdminPage         from './pages/AdminPage';        // T49
-import AdminRoute        from './components/AdminRoute';  // guard admin
+import SellerPage        from './pages/SellerPage';
+import AdminPage         from './pages/AdminPage';
+import AdminRoute        from './components/AdminRoute';
 
 const PrivateRoute = ({ children }) => {
   const { token, loading } = useAuth();
@@ -45,7 +46,8 @@ function App() {
       <Route path="/chats"              element={<PrivateRoute><ChatsPage /></PrivateRoute>} />
       <Route path="/chats/conversation" element={<PrivateRoute><ConversationPage /></PrivateRoute>} />
 
-      {/* Ruta /admin — solo accesible con role=admin */}
+      <Route path="/seller/:id" element={<SellerPage />} />
+
       <Route path="/admin" element={<AdminRoute><AdminPage /></AdminRoute>} />
 
       <Route path="*" element={<Navigate to="/" replace />} />
