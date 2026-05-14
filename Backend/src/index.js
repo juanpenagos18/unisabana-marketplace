@@ -7,7 +7,8 @@ const connectDB = require('./config/db');
 const healthRoutes  = require('./routes/health');
 const authRoutes    = require('./routes/auth');
 const userRoutes    = require('./routes/users');
-const productRoutes = require('./routes/products'); // T16-T27
+const productRoutes = require('./routes/products');
+const orderRoutes   = require('./routes/orders');   // T36-T39
 
 const app  = express();
 const PORT = process.env.PORT || 3000;
@@ -19,7 +20,8 @@ app.use(morgan('dev'));
 app.use('/api',          healthRoutes);
 app.use('/api/auth',     authRoutes);
 app.use('/api/users',    userRoutes);
-app.use('/api/products', productRoutes); // NUEVO — Módulo 3
+app.use('/api/products', productRoutes);
+app.use('/api/orders',   orderRoutes);   // NUEVO
 
 app.use((req, res) => res.status(404).json({ error: 'Ruta no encontrada' }));
 app.use((err, req, res, next) => {
@@ -29,6 +31,6 @@ app.use((err, req, res, next) => {
 
 const start = async () => {
   await connectDB();
-  app.listen(PORT, () => console.log('🚀 Servidor en http://localhost:' + PORT));
+  app.listen(PORT, () => console.log('Servidor en http://localhost:' + PORT));
 };
 start();

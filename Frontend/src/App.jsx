@@ -7,10 +7,12 @@ import RegisterPage      from './pages/RegisterPage';
 import LoginPage         from './pages/LoginPage';
 import HomePage          from './pages/HomePage';
 import ProfilePage       from './pages/ProfilePage';
-import NewProductPage    from './pages/NewProductPage';    // T18
-import ProductDetailPage from './pages/ProductDetailPage'; // T24
-import MyProductsPage    from './pages/MyProductsPage';    // T26
-import EditProductPage   from './pages/EditProductPage';   // T25
+import NewProductPage    from './pages/NewProductPage';
+import ProductDetailPage from './pages/ProductDetailPage';
+import MyProductsPage    from './pages/MyProductsPage';
+import EditProductPage   from './pages/EditProductPage';
+import CartPage          from './pages/CartPage';      // T35
+import OrdersPage        from './pages/OrdersPage';    // T39
 
 const PrivateRoute = ({ children }) => {
   const { token, loading } = useAuth();
@@ -21,20 +23,20 @@ const PrivateRoute = ({ children }) => {
 function App() {
   return (
     <Routes>
-      {/* Rutas públicas */}
       <Route path="/"         element={<AuthSelectPage />} />
       <Route path="/register" element={<RegisterPage />} />
       <Route path="/login"    element={<LoginPage />} />
 
-      {/* Rutas privadas — requieren sesión */}
-      <Route path="/home"     element={<PrivateRoute><HomePage /></PrivateRoute>} />
-      <Route path="/profile"  element={<PrivateRoute><ProfilePage /></PrivateRoute>} />
+      <Route path="/home"    element={<PrivateRoute><HomePage /></PrivateRoute>} />
+      <Route path="/profile" element={<PrivateRoute><ProfilePage /></PrivateRoute>} />
 
-      {/* Módulo 3 — Productos */}
-      <Route path="/products/new"       element={<PrivateRoute><NewProductPage /></PrivateRoute>} />
-      <Route path="/products/:id"       element={<ProductDetailPage />} />
-      <Route path="/products/:id/edit"  element={<PrivateRoute><EditProductPage /></PrivateRoute>} />
-      <Route path="/my-products"        element={<PrivateRoute><MyProductsPage /></PrivateRoute>} />
+      <Route path="/products/new"      element={<PrivateRoute><NewProductPage /></PrivateRoute>} />
+      <Route path="/products/:id"      element={<ProductDetailPage />} />
+      <Route path="/products/:id/edit" element={<PrivateRoute><EditProductPage /></PrivateRoute>} />
+      <Route path="/my-products"       element={<PrivateRoute><MyProductsPage /></PrivateRoute>} />
+
+      <Route path="/cart"   element={<PrivateRoute><CartPage /></PrivateRoute>} />
+      <Route path="/orders" element={<PrivateRoute><OrdersPage /></PrivateRoute>} />
 
       <Route path="*" element={<Navigate to="/" replace />} />
     </Routes>
