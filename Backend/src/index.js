@@ -4,12 +4,14 @@ const cors      = require('cors');
 const morgan    = require('morgan');
 const connectDB = require('./config/db');
 
-const healthRoutes   = require('./routes/health');
-const authRoutes     = require('./routes/auth');
-const userRoutes     = require('./routes/users');
-const productRoutes  = require('./routes/products');
-const orderRoutes    = require('./routes/orders');
-const messageRoutes  = require('./routes/messages');  // T40-T44
+const healthRoutes       = require('./routes/health');
+const authRoutes         = require('./routes/auth');
+const userRoutes         = require('./routes/users');
+const productRoutes      = require('./routes/products');
+const orderRoutes        = require('./routes/orders');
+const messageRoutes      = require('./routes/messages');
+const reviewRoutes       = require('./routes/reviews');        // T45
+const notificationRoutes = require('./routes/notifications'); // T47
 
 const app  = express();
 const PORT = process.env.PORT || 3000;
@@ -18,12 +20,14 @@ app.use(cors());
 app.use(express.json());
 app.use(morgan('dev'));
 
-app.use('/api',          healthRoutes);
-app.use('/api/auth',     authRoutes);
-app.use('/api/users',    userRoutes);
-app.use('/api/products', productRoutes);
-app.use('/api/orders',   orderRoutes);
-app.use('/api/messages', messageRoutes);  // NUEVO
+app.use('/api',               healthRoutes);
+app.use('/api/auth',          authRoutes);
+app.use('/api/users',         userRoutes);
+app.use('/api/products',      productRoutes);
+app.use('/api/orders',        orderRoutes);
+app.use('/api/messages',      messageRoutes);
+app.use('/api/reviews',       reviewRoutes);        // NUEVO
+app.use('/api/notifications', notificationRoutes); // NUEVO
 
 app.use((req, res) => res.status(404).json({ error: 'Ruta no encontrada' }));
 app.use((err, req, res, next) => {

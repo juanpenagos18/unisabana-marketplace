@@ -1,16 +1,16 @@
 import React, { useState, useRef, useEffect } from 'react';
 import { useNavigate, useLocation } from 'react-router-dom';
 import CartButton from './CartButton';
+import NotificationBell from './NotificationBell';
 
 const Header = ({ user, onLogout, onSearch }) => {
   const navigate  = useNavigate();
   const location  = useLocation();
   const inHome    = location.pathname === '/home';
-  const [query, setQuery]     = useState('');
+  const [query, setQuery]       = useState('');
   const [menuOpen, setMenuOpen] = useState(false);
   const menuRef = useRef(null);
 
-  // Cierra el menú al hacer clic fuera
   useEffect(() => {
     const handler = e => { if (menuRef.current && !menuRef.current.contains(e.target)) setMenuOpen(false); };
     document.addEventListener('mousedown', handler);
@@ -36,7 +36,6 @@ const Header = ({ user, onLogout, onSearch }) => {
     <header className="w-full sticky top-0 z-50 shadow-md" style={{ backgroundColor: 'var(--color-primary)' }}>
       <div className="max-w-5xl mx-auto px-4 py-3 flex items-center gap-3">
 
-        {/* Logo */}
         <button onClick={() => navigate('/home')} className="flex items-center gap-2 flex-shrink-0">
           <div className="w-8 h-8 rounded-full flex items-center justify-center"
             style={{ backgroundColor: 'var(--color-accent)' }}>
@@ -47,7 +46,6 @@ const Header = ({ user, onLogout, onSearch }) => {
           </span>
         </button>
 
-        {/* Búsqueda */}
         <div className="flex-1 relative">
           <input value={query} onChange={e => setQuery(e.target.value)} onKeyDown={handleSearch}
             placeholder="Buscar productos..."
@@ -56,19 +54,18 @@ const Header = ({ user, onLogout, onSearch }) => {
               border: '1px solid rgba(255,255,255,0.25)' }} />
         </div>
 
-        {/* Navegación */}
         {user ? (
           <div className="flex items-center gap-2 flex-shrink-0">
+            {/* T47 — Campanita de notificaciones con sonido */}
+            <NotificationBell />
             <CartButton />
 
-            {/* Menú desplegable del avatar */}
             <div className="relative" ref={menuRef}>
               <button onClick={() => setMenuOpen(o => !o)}
                 className="w-8 h-8 rounded-full flex items-center justify-center font-bold text-sm text-white"
                 style={{ backgroundColor: 'var(--color-accent)' }}>
                 {user.name?.charAt(0).toUpperCase()}
               </button>
-
               {menuOpen && (
                 <div className="absolute right-0 top-10 w-52 rounded-2xl shadow-xl overflow-hidden z-50"
                   style={{ backgroundColor: 'white', border: '1px solid var(--color-border)' }}>

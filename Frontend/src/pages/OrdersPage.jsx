@@ -2,6 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
 import Layout from '../components/layout/Layout';
+import ReviewModal from '../components/ReviewModal';
 import API from '../hooks/useApi';
 
 const STATUS_CONFIG = {
@@ -21,14 +22,15 @@ const StatusBadge = ({ status }) => {
   );
 };
 
-// T39 — Vista de Historial y Seguimiento de Estados
 const OrdersPage = () => {
   const { user, logout } = useAuth();
   const navigate = useNavigate();
-  const [orders, setOrders]   = useState([]);
-  const [loading, setLoading] = useState(true);
-  const [tab, setTab]         = useState('purchases'); // 'purchases' | 'sales'
-  const [sales, setSales]     = useState([]);
+  const [orders, setOrders]       = useState([]);
+  const [sales, setSales]         = useState([]);
+  const [loading, setLoading]     = useState(true);
+  const [tab, setTab]             = useState('purchases');
+  const [reviewOrder, setReviewOrder] = useState(null); // orden a reseñar
+  const [reviewed, setReviewed]   = useState(new Set()); // IDs de órdenes ya reseñadas
 
   const handleLogout = () => { logout(); navigate('/'); };
 
@@ -52,9 +54,11 @@ const OrdersPage = () => {
     try {
       await API.patch(`/orders/${orderId}/status`, { status });
       setSales(prev => prev.map(o => o._id === orderId ? { ...o, status } : o));
-    } catch (err) {
-      alert(err.response?.data?.message || 'Error al actualizar el estado');
-    }
+    } catch (err) { alert(err.response?.data?.message || 'Error'); }
+  };
+
+  const handleReviewSuccess = (orderId) => {
+    setReviewed(prev => new Set([...prev, orderId]));
   };
 
   const displayList = tab === 'purchases' ? orders : sales;
@@ -67,7 +71,7 @@ const OrdersPage = () => {
           Mis órdenes
         </h2>
 
-        {/* Tabs compras / ventas */}
+        {/* Tabs */}
         <div className="flex rounded-xl overflow-hidden mb-5"
           style={{ border: '1px solid var(--color-border)' }}>
           {[
@@ -102,7 +106,6 @@ const OrdersPage = () => {
           <div className="flex flex-col gap-4">
             {displayList.map(order => (
               <div key={order._id} className="card flex flex-col gap-3">
-                {/* Header de la orden */}
                 <div className="flex items-start justify-between gap-2">
                   <div>
                     <p className="text-xs font-mono text-gray-400">#{order._id.slice(-8).toUpperCase()}</p>
@@ -132,10 +135,9 @@ const OrdersPage = () => {
                       </div>
                       <div className="flex-1 min-w-0">
                         <p className="text-sm font-medium truncate">{item.title}</p>
-                        <p className="text-xs text-gray-400">
-                          {tab === 'purchases' && item.seller
-                            ? `Vendedor: ${item.seller.name}` : ''}
-                        </p>
+                        {tab === 'purchases' && item.seller && (
+                          <p className="text-xs text-gray-400">Vendedor: {item.seller.name}</p>
+                        )}
                       </div>
                       <p className="text-sm font-bold flex-shrink-0" style={{ color: 'var(--color-primary)' }}>
                         ${item.price.toLocaleString('es-CO')}
@@ -153,21 +155,32 @@ const OrdersPage = () => {
                   </span>
                 </div>
 
-                {/* T39 — Actualizar estado (solo vendedor) */}
+                {/* T46 — Botón reseñar (solo compras entregadas) */}
+                {tab === 'purchases' && order.status === 'Entregada' && !reviewed.has(order._id) && (
+                  <button onClick={() => setReviewOrder(order)}
+                    className="w-full py-2 rounded-xl text-sm font-semibold transition-colors"
+                    style={{ backgroundColor: '#FEF3C7', color: '#D97706',
+                      border: '1px solid #FDE68A' }}>
+                    ⭐ Calificar vendedor
+                  </button>
+                )}
+                {reviewed.has(order._id) && (
+                  <p className="text-xs text-center text-green-600">✓ Reseña enviada</p>
+                )}
+
+                {/* Cambiar estado (ventas) */}
                 {tab === 'sales' && order.status !== 'Entregada' && order.status !== 'Cancelada' && (
                   <div className="flex gap-2 pt-1">
                     <p className="text-xs text-gray-400 self-center mr-1">Cambiar a:</p>
-                    {['Confirmada', 'Entregada', 'Cancelada']
-                      .filter(s => s !== order.status)
-                      .map(s => (
-                        <button key={s} onClick={() => updateStatus(order._id, s)}
-                          className={`text-xs px-3 py-1.5 rounded-xl border font-medium transition-colors
-                            ${s === 'Cancelada'
-                              ? 'border-red-300 text-red-500 hover:bg-red-50'
-                              : 'border-gray-300 text-gray-600 hover:bg-gray-50'}`}>
-                          {STATUS_CONFIG[s].icon} {s}
-                        </button>
-                      ))}
+                    {['Confirmada', 'Entregada', 'Cancelada'].filter(s => s !== order.status).map(s => (
+                      <button key={s} onClick={() => updateStatus(order._id, s)}
+                        className={`text-xs px-3 py-1.5 rounded-xl border font-medium transition-colors
+                          ${s === 'Cancelada'
+                            ? 'border-red-300 text-red-500 hover:bg-red-50'
+                            : 'border-gray-300 text-gray-600 hover:bg-gray-50'}`}>
+                        {STATUS_CONFIG[s].icon} {s}
+                      </button>
+                    ))}
                   </div>
                 )}
               </div>
@@ -175,6 +188,15 @@ const OrdersPage = () => {
           </div>
         )}
       </div>
+
+      {/* T46 — Modal de reseña */}
+      {reviewOrder && (
+        <ReviewModal
+          order={reviewOrder}
+          onClose={() => setReviewOrder(null)}
+          onSuccess={() => handleReviewSuccess(reviewOrder._id)}
+        />
+      )}
     </Layout>
   );
 };
