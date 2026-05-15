@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
+import AdminReviewCard from '../components/AdminReviewCard';
 import {
   BarChart, Bar, LineChart, Line, PieChart, Pie, Cell,
   XAxis, YAxis, Tooltip, ResponsiveContainer, Legend,
@@ -541,25 +542,12 @@ const AdminPage = () => {
                 {reviews.length === 0 ? (
                   <p className="text-center text-gray-400 py-8">No hay reseñas registradas</p>
                 ) : reviews.map(r => (
-                  <div key={r._id} className="card flex items-start gap-3">
-                    <div className="flex-1 min-w-0">
-                      <p className="text-sm font-medium">
-                        {r.reviewer?.name} → {r.seller?.name}
-                      </p>
-                      <p className="text-xs text-gray-400 truncate">📦 {r.product?.title}</p>
-                      <div className="flex text-yellow-400 text-xs my-1">
-                        {'★'.repeat(r.rating)}{'☆'.repeat(5 - r.rating)}
-                      </div>
-                      {r.comment && <p className="text-xs text-gray-600">{r.comment}</p>}
-                      <p className="text-[10px] text-gray-300 mt-1">
-                        {new Date(r.createdAt).toLocaleDateString('es-CO')}
-                      </p>
-                    </div>
-                    <button onClick={() => handleDeleteReview(r._id)} disabled={actionLoading}
-                      className="text-xs px-3 py-1.5 rounded-xl border border-red-300 text-red-500 hover:bg-red-50 flex-shrink-0 transition-colors">
-                      Eliminar
-                    </button>
-                  </div>
+                  <AdminReviewCard
+                    key={r._id}
+                    review={r}
+                    onDelete={handleDeleteReview}
+                    actionLoading={actionLoading}
+                  />
                 ))}
               </div>
             )}
