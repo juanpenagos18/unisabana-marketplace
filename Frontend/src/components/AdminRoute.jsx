@@ -1,21 +1,19 @@
 import React, { useEffect, useState } from 'react';
-import { Navigate } from 'react-router-dom';
+import { Navigate, useLocation } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
 
 const AdminRoute = ({ children }) => {
   const { user, token, loading } = useAuth();
+  const location = useLocation();
   const [ready, setReady] = useState(false);
 
-  // Espera un tick extra para asegurarse que el user
-  // ya cargó desde localStorage antes de evaluar el role
   useEffect(() => {
     if (!loading) {
-      const timer = setTimeout(() => setReady(true), 50);
+      const timer = setTimeout(() => setReady(true), 80);
       return () => clearTimeout(timer);
     }
   }, [loading]);
 
-  // Mientras carga muestra spinner en vez de redirigir prematuramente
   if (loading || !ready) {
     return (
       <div className="min-h-screen flex items-center justify-center"
@@ -26,8 +24,16 @@ const AdminRoute = ({ children }) => {
     );
   }
 
-  if (!token)                 return <Navigate to="/login" replace />;
-  if (user?.role !== 'admin') return <Navigate to="/home" replace />;
+  // No logueado — manda al login guardando que quería ir a /admin
+  if (!token) {
+    return <Navigate to={`/login?redirect=${location.pathname}`} replace />;
+  }
+
+  // Logueado pero no es admin
+  if (user?.role !== 'admin') {
+    return <Navigate to="/home" replace />;
+  }
+
   return children;
 };
 

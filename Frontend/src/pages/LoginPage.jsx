@@ -1,17 +1,18 @@
 import React, { useState } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { useNavigate, useSearchParams } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
 import API from '../hooks/useApi';
 
-// T10 — Pantalla de Login UI
 const LoginPage = () => {
   const navigate = useNavigate();
+  const [searchParams] = useSearchParams();
   const { login } = useAuth();
-  const [form, setForm]     = useState({ email: '', password: '' });
-  const [error, setError]   = useState('');
+
+  const [form, setForm]       = useState({ email: '', password: '' });
+  const [error, setError]     = useState('');
   const [loading, setLoading] = useState(false);
 
-  const handleChange = (e) => setForm({ ...form, [e.target.name]: e.target.value });
+  const handleChange = e => setForm({ ...form, [e.target.name]: e.target.value });
 
   const handleSubmit = async () => {
     setError('');
@@ -21,10 +22,16 @@ const LoginPage = () => {
     }
     try {
       setLoading(true);
-      // T9 — Consume POST /api/auth/login
       const res = await API.post('/auth/login', form);
       login(res.data.token, res.data.user);
-      navigate('/home');
+
+      // Si venía de /admin u otra ruta protegida, redirige allá
+      const redirect = searchParams.get('redirect');
+      if (redirect) {
+        navigate(redirect, { replace: true });
+      } else {
+        navigate('/home', { replace: true });
+      }
     } catch (err) {
       setError(err.response?.data?.message || 'Credenciales incorrectas.');
     } finally {
@@ -57,21 +64,32 @@ const LoginPage = () => {
             </div>
           </div>
 
+          {/* Aviso si viene de /admin */}
+          {searchParams.get('redirect') === '/admin' && (
+            <div className="bg-blue-50 border border-blue-200 rounded-xl px-4 py-3 text-center">
+              <p className="text-xs text-blue-600 font-medium">
+                🔐 Inicia sesión con tu cuenta de administrador para acceder al panel
+              </p>
+            </div>
+          )}
+
           <input name="email" value={form.email} onChange={handleChange}
             placeholder="Ingresa tu correo (@unisabana.edu.co)" type="email"
-            className="input-base" onKeyDown={(e) => e.key === 'Enter' && handleSubmit()} />
+            className="input-base" onKeyDown={e => e.key === 'Enter' && handleSubmit()} />
           <input name="password" value={form.password} onChange={handleChange}
             placeholder="Ingresa tu contraseña" type="password"
-            className="input-base" onKeyDown={(e) => e.key === 'Enter' && handleSubmit()} />
+            className="input-base" onKeyDown={e => e.key === 'Enter' && handleSubmit()} />
 
           {error && <p className="text-red-600 text-xs text-center">{error}</p>}
 
           <div className="flex flex-col gap-3 mt-1">
-            <button onClick={handleSubmit} className="btn-primary w-full text-base py-3 font-bold" disabled={loading}>
+            <button onClick={handleSubmit}
+              className="btn-primary w-full text-base py-3 font-bold" disabled={loading}>
               {loading ? 'Ingresando...' : 'Ingresar'}
             </button>
-            <button onClick={() => navigate('/')} className="btn-secondary w-full text-base py-3 font-bold" disabled={loading}>
-              Atras
+            <button onClick={() => navigate('/')}
+              className="btn-secondary w-full text-base py-3 font-bold" disabled={loading}>
+              Atrás
             </button>
           </div>
         </div>
