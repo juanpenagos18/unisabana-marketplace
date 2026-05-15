@@ -4,6 +4,7 @@ import { useAuth } from '../context/AuthContext';
 import { useCart } from '../context/CartContext';
 import Layout from '../components/layout/Layout';
 import ReportModal from '../components/ReportModal';
+import ImageViewer from '../components/ImageViewer';
 import API from '../hooks/useApi';
 
 const StarRating = ({ rating, count }) => (
@@ -27,16 +28,18 @@ const ProductDetailPage = () => {
   const { user, logout } = useAuth();
   const { addItem, isInCart } = useCart();
 
-  const [product, setProduct]     = useState(null);
-  const [reviews, setReviews]     = useState([]);
-  const [reviewAvg, setReviewAvg] = useState(0);
-  const [loading, setLoading]     = useState(true);
-  const [imgIndex, setImgIndex]   = useState(0);
-  const [qty, setQty]             = useState(1);
-  const [added, setAdded]         = useState(false);
-  const [error, setError]         = useState('');
+  const [product, setProduct]       = useState(null);
+  const [reviews, setReviews]       = useState([]);
+  const [reviewAvg, setReviewAvg]   = useState(0);
+  const [loading, setLoading]       = useState(true);
+  const [imgIndex, setImgIndex]     = useState(0);
+  const [qty, setQty]               = useState(1);
+  const [added, setAdded]           = useState(false);
+  const [error, setError]           = useState('');
   const [showReport, setShowReport] = useState(false);
   const [reportTarget, setReportTarget] = useState(null);
+  // Estado del visor de imagen
+  const [viewerSrc, setViewerSrc]   = useState(null);
 
   useEffect(() => {
     const fetch = async () => {
@@ -75,8 +78,8 @@ const ProductDetailPage = () => {
     navigate(`/chats/conversation?${params}`);
   };
 
-  const handleReportReview = (reviewId) => {
-    setReportTarget({ id: reviewId, type: 'review' });
+  const openReport = (id, type) => {
+    setReportTarget({ id, type });
     setShowReport(true);
   };
 
@@ -105,13 +108,21 @@ const ProductDetailPage = () => {
     <Layout user={user} onLogout={handleLogout}>
       <div className="max-w-2xl mx-auto py-6 flex flex-col gap-6">
 
-        {/* Carrusel */}
+        {/* Carrusel — imagen principal clickeable para ver en grande */}
         <div className="rounded-2xl overflow-hidden" style={{ border: '1px solid var(--color-border)' }}>
           <div className="w-full h-72 flex items-center justify-center relative"
             style={{ backgroundColor: 'var(--color-surface-alt)' }}>
-            {imgs.length > 0
-              ? <img src={imgs[imgIndex]} alt={product.title} className="w-full h-full object-contain" />
-              : <span className="text-8xl">📦</span>}
+            {imgs.length > 0 ? (
+              <img
+                src={imgs[imgIndex]}
+                alt={product.title}
+                className="w-full h-full object-contain cursor-zoom-in"
+                onClick={() => setViewerSrc(imgs[imgIndex])}
+                title="Clic para ver en grande"
+              />
+            ) : (
+              <span className="text-8xl">📦</span>
+            )}
             {imgs.length > 1 && (
               <>
                 <button onClick={() => setImgIndex(i => (i-1+imgs.length)%imgs.length)}
@@ -120,13 +131,20 @@ const ProductDetailPage = () => {
                   className="absolute right-2 w-8 h-8 rounded-full bg-white/80 flex items-center justify-center shadow">›</button>
               </>
             )}
+            {/* Indicador de zoom */}
+            {imgs.length > 0 && (
+              <div className="absolute bottom-2 right-2 bg-black/40 text-white text-[10px] px-2 py-1 rounded-lg">
+                🔍 Ver en grande
+              </div>
+            )}
           </div>
+          {/* Miniaturas clickeables */}
           {imgs.length > 1 && (
             <div className="flex gap-2 p-3 overflow-x-auto">
-              {imgs.map((src,i) => (
+              {imgs.map((src, i) => (
                 <img key={i} src={src} alt="" onClick={() => setImgIndex(i)}
                   className={`w-14 h-14 object-cover rounded-lg cursor-pointer flex-shrink-0
-                    ${i===imgIndex ? 'opacity-100 ring-2 ring-blue-700' : 'opacity-60'}`} />
+                    ${i===imgIndex ? 'opacity-100 ring-2 ring-blue-700' : 'opacity-60 hover:opacity-80'}`} />
               ))}
             </div>
           )}
@@ -146,7 +164,6 @@ const ProductDetailPage = () => {
             ${product.price.toLocaleString('es-CO')}
           </p>
           <p className="text-sm text-gray-500">{product.category}</p>
-          {/* Rating del producto */}
           {reviews.length > 0 && <StarRating rating={reviewAvg} count={reviews.length} />}
           <p className="text-sm font-medium">
             <span className={stock > 0 ? 'text-green-600' : 'text-red-500'}>
@@ -216,16 +233,16 @@ const ProductDetailPage = () => {
           <div className="flex gap-3">
             <button onClick={() => navigate('/home')} className="btn-secondary flex-1">← Volver</button>
             {user && !isOwner && (
-              <button onClick={() => { setReportTarget({ id: product._id, type: 'product' }); setShowReport(true); }}
+              <button onClick={() => openReport(product._id, 'product')}
                 className="flex-1 py-2 rounded-xl text-xs font-medium text-gray-400 border border-gray-200
                   hover:text-red-500 hover:border-red-200 hover:bg-red-50 transition-colors">
-                🚩 Reportar
+                🚩 Reportar producto
               </button>
             )}
           </div>
         </div>
 
-        {/* Reseñas del producto */}
+        {/* Reseñas */}
         {reviews.length > 0 && (
           <div className="flex flex-col gap-3">
             <h2 className="text-lg font-bold" style={{ color: 'var(--color-primary)' }}>
@@ -246,25 +263,32 @@ const ProductDetailPage = () => {
                       </div>
                     </div>
                   </div>
-                  <div className="flex items-center gap-2">
+                  <div className="flex items-center gap-2 flex-shrink-0">
                     <p className="text-[10px] text-gray-400">
                       {new Date(r.createdAt).toLocaleDateString('es-CO', { day:'2-digit', month:'short' })}
                     </p>
-                    {/* Reportar reseña */}
+                    {/* Botón reportar reseña — con texto */}
                     {user && (
-                      <button onClick={() => handleReportReview(r._id)}
-                        className="text-[10px] text-gray-300 hover:text-red-400 transition-colors">
-                        🚩
+                      <button
+                        onClick={() => openReport(r._id, 'review')}
+                        className="text-[10px] text-gray-400 hover:text-red-500 border border-gray-200
+                          hover:border-red-200 hover:bg-red-50 px-2 py-1 rounded-lg transition-colors">
+                        🚩 Reportar
                       </button>
                     )}
                   </div>
                 </div>
                 {r.comment && <p className="text-sm text-gray-600 pl-11">{r.comment}</p>}
-                {/* Fotos de la reseña */}
+                {/* Fotos de la reseña — clickeables para ver en grande */}
                 {r.photos?.length > 0 && (
                   <div className="flex gap-2 pl-11 flex-wrap">
                     {r.photos.map((src, i) => (
-                      <img key={i} src={src} alt="" className="w-20 h-20 object-cover rounded-xl" />
+                      <img
+                        key={i} src={src} alt=""
+                        className="w-20 h-20 object-cover rounded-xl cursor-zoom-in hover:opacity-90 transition-opacity"
+                        onClick={() => setViewerSrc(src)}
+                        title="Clic para ver en grande"
+                      />
                     ))}
                   </div>
                 )}
@@ -273,6 +297,11 @@ const ProductDetailPage = () => {
           </div>
         )}
       </div>
+
+      {/* Visor de imagen fullscreen */}
+      {viewerSrc && (
+        <ImageViewer src={viewerSrc} alt={product?.title} onClose={() => setViewerSrc(null)} />
+      )}
 
       {showReport && reportTarget && (
         <ReportModal
