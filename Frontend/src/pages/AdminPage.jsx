@@ -36,6 +36,7 @@ const AdminPage = () => {
   const [users, setUsers]       = useState([]);
   const [reports, setReports]   = useState([]);
   const [products, setProducts] = useState([]);
+  const [reviews, setReviews]   = useState([]);
   const [loading, setLoading]   = useState(true);
 
   // Filtros usuarios
@@ -60,17 +61,19 @@ const AdminPage = () => {
   const loadAll = async () => {
     setLoading(true);
     try {
-      const [statsRes, usersRes, reportsRes, prodsRes] = await Promise.all([
+      const [statsRes, usersRes, reportsRes, prodsRes, reviewsRes] = await Promise.all([
         API.get('/admin/stats'),
         API.get('/admin/users'),
         API.get('/admin/reports?status=pendiente'),
         API.get('/admin/products'),
+        API.get('/admin/reviews'),
       ]);
       setStats(statsRes.data.stats);
       setCharts(statsRes.data.charts);
       setUsers(usersRes.data.users);
       setReports(reportsRes.data.reports);
       setProducts(prodsRes.data.products);
+      setReviews(reviewsRes.data.reviews);
     } catch {}
     finally { setLoading(false); }
   };
@@ -117,6 +120,17 @@ const AdminPage = () => {
     finally { setActionLoading(false); }
   };
 
+  const handleDeleteReview = async (reviewId) => {
+  if (!confirm('¿Eliminar esta reseña? Esta acción no se puede deshacer.')) return;
+  setActionLoading(true);
+  try {
+    await API.delete(`/admin/reviews/${reviewId}`);
+    setReviews(prev => prev.filter(r => r._id !== reviewId));
+    flash('Reseña eliminada');
+  } catch { flash('Error al eliminar'); }
+  finally { setActionLoading(false); }
+};
+
   const handleDeleteProduct = async () => {
     if (!deleteReason.trim()) return;
     setActionLoading(true);
@@ -150,6 +164,7 @@ const AdminPage = () => {
     { key: 'users',    label: `👥 Usuarios (${users.length})` },
     { key: 'products', label: `📦 Productos (${products.length})` },
     { key: 'reports',  label: `🚨 Reportes (${reports.length})` },
+    { key: 'reviews',  label: `⭐ Reseñas (${reviews.length})` },
   ];
 
   return (
@@ -516,6 +531,34 @@ const AdminPage = () => {
                         </a>
                       )}
                     </div>
+                  </div>
+                ))}
+              </div>
+            )}
+
+            {tab === 'reviews' && (
+              <div className="flex flex-col gap-3">
+                {reviews.length === 0 ? (
+                  <p className="text-center text-gray-400 py-8">No hay reseñas registradas</p>
+                ) : reviews.map(r => (
+                  <div key={r._id} className="card flex items-start gap-3">
+                    <div className="flex-1 min-w-0">
+                      <p className="text-sm font-medium">
+                        {r.reviewer?.name} → {r.seller?.name}
+                      </p>
+                      <p className="text-xs text-gray-400 truncate">📦 {r.product?.title}</p>
+                      <div className="flex text-yellow-400 text-xs my-1">
+                        {'★'.repeat(r.rating)}{'☆'.repeat(5 - r.rating)}
+                      </div>
+                      {r.comment && <p className="text-xs text-gray-600">{r.comment}</p>}
+                      <p className="text-[10px] text-gray-300 mt-1">
+                        {new Date(r.createdAt).toLocaleDateString('es-CO')}
+                      </p>
+                    </div>
+                    <button onClick={() => handleDeleteReview(r._id)} disabled={actionLoading}
+                      className="text-xs px-3 py-1.5 rounded-xl border border-red-300 text-red-500 hover:bg-red-50 flex-shrink-0 transition-colors">
+                      Eliminar
+                    </button>
                   </div>
                 ))}
               </div>

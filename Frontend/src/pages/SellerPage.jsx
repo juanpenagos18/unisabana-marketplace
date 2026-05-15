@@ -7,7 +7,7 @@ import ReportModal from '../components/ReportModal';
 import API from '../hooks/useApi';
 
 const StarRating = ({ rating }) => (
-  <div className="flex gap-0.5">
+  <div className="flex gap-0.5 items-center">
     {[1,2,3,4,5].map(s => (
       <svg key={s} xmlns="http://www.w3.org/2000/svg"
         className={`w-5 h-5 ${s <= Math.round(rating) ? 'text-yellow-400' : 'text-gray-300'}`}
@@ -19,20 +19,17 @@ const StarRating = ({ rating }) => (
   </div>
 );
 
-// Página pública del vendedor — solo accesible si role=seller
 const SellerPage = () => {
   const { id } = useParams();
   const navigate = useNavigate();
   const { user, logout } = useAuth();
 
-  const [seller, setSeller]       = useState(null);
-  const [products, setProducts]   = useState([]);
-  const [reviews, setReviews]     = useState([]);
-  const [loading, setLoading]     = useState(true);
-  const [error, setError]         = useState('');
+  const [seller, setSeller]         = useState(null);
+  const [products, setProducts]     = useState([]);
+  const [reviews, setReviews]       = useState([]);
+  const [loading, setLoading]       = useState(true);
+  const [error, setError]           = useState('');
   const [showReport, setShowReport] = useState(false);
-
-  const handleLogout = () => { logout(); navigate('/'); };
 
   useEffect(() => {
     const load = async () => {
@@ -42,9 +39,7 @@ const SellerPage = () => {
           API.get(`/products?sellerId=${id}`),
           API.get(`/reviews/seller/${id}`),
         ]);
-
         const s = userRes.data.user;
-        // Solo vendedores tienen página pública
         if (s.role !== 'seller' && s.role !== 'admin') {
           setError('Este usuario no tiene página de vendedor.');
           setLoading(false);
@@ -53,12 +48,14 @@ const SellerPage = () => {
         setSeller(s);
         setProducts(prodsRes.data.products);
         setReviews(reviewsRes.data.reviews);
-      } catch {
-        setError('Vendedor no encontrado.');
-      } finally { setLoading(false); }
+      } catch { setError('Vendedor no encontrado.'); }
+      finally { setLoading(false); }
     };
     load();
   }, [id]);
+
+  const handleLogout = () => { logout(); navigate('/'); };
+  const isOwnProfile = user?.id === id;
 
   if (loading) return (
     <Layout user={user} onLogout={handleLogout}>
@@ -79,13 +76,11 @@ const SellerPage = () => {
     </Layout>
   );
 
-  const isOwnProfile = user?.id === id;
-
   return (
     <Layout user={user} onLogout={handleLogout}>
       <div className="max-w-3xl mx-auto py-6 flex flex-col gap-6">
 
-        {/* Perfil del vendedor */}
+        {/* Perfil */}
         <div className="card flex flex-col sm:flex-row gap-5 items-start">
           <div className="w-20 h-20 rounded-full flex items-center justify-center text-3xl font-bold text-white flex-shrink-0"
             style={{ backgroundColor: 'var(--color-primary)' }}>
@@ -95,15 +90,12 @@ const SellerPage = () => {
             <div className="flex items-start justify-between gap-2 flex-wrap">
               <div>
                 <h1 className="text-2xl font-bold" style={{ color: 'var(--color-primary)',
-                  fontFamily: 'Playfair Display, serif' }}>
-                  {seller.name}
-                </h1>
+                  fontFamily: 'Playfair Display, serif' }}>{seller.name}</h1>
                 {seller.career && <p className="text-sm text-gray-400 mt-0.5">{seller.career}</p>}
                 <span className="inline-block mt-2 px-3 py-1 rounded-full text-xs font-semibold bg-green-100 text-green-700">
                   🏪 Vendedor verificado
                 </span>
               </div>
-              {/* Reportar vendedor */}
               {user && !isOwnProfile && (
                 <button onClick={() => setShowReport(true)}
                   className="text-xs px-3 py-1.5 rounded-xl border border-gray-200 text-gray-400
@@ -112,21 +104,13 @@ const SellerPage = () => {
                 </button>
               )}
             </div>
-
-            {/* Reputación */}
             <div className="mt-3 flex items-center gap-3">
               <StarRating rating={seller.reputation || 0} />
-              <span className="text-xs text-gray-400">
-                {reviews.length} reseña{reviews.length !== 1 ? 's' : ''}
-              </span>
+              <span className="text-xs text-gray-400">{reviews.length} reseña{reviews.length!==1?'s':''}</span>
             </div>
-
-            {/* Stats rápidos */}
             <div className="flex gap-4 mt-3">
               <div className="text-center">
-                <p className="text-lg font-bold" style={{ color: 'var(--color-primary)' }}>
-                  {products.length}
-                </p>
+                <p className="text-lg font-bold" style={{ color: 'var(--color-primary)' }}>{products.length}</p>
                 <p className="text-xs text-gray-400">Productos</p>
               </div>
               <div className="text-center">
@@ -139,15 +123,15 @@ const SellerPage = () => {
           </div>
         </div>
 
-        {/* Productos del vendedor */}
+        {/* Productos */}
         <div>
           <h2 className="text-lg font-bold mb-4" style={{ color: 'var(--color-primary)' }}>
-            Productos publicados ({products.length})
+            Productos ({products.length})
           </h2>
           {products.length === 0 ? (
             <div className="text-center py-10 text-gray-400">
               <span className="text-4xl block mb-2">📭</span>
-              <p>Este vendedor no tiene productos activos.</p>
+              <p>No tiene productos activos.</p>
             </div>
           ) : (
             <div className="grid grid-cols-2 sm:grid-cols-3 gap-4">
@@ -156,17 +140,30 @@ const SellerPage = () => {
           )}
         </div>
 
-        {/* Reseñas */}
+        {/* Reseñas — ahora muestran a qué producto pertenecen */}
         {reviews.length > 0 && (
           <div>
             <h2 className="text-lg font-bold mb-4" style={{ color: 'var(--color-primary)' }}>
-              Reseñas ({reviews.length})
+              Reseñas recibidas ({reviews.length})
             </h2>
             <div className="flex flex-col gap-3">
               {reviews.map(r => (
                 <div key={r._id} className="card flex flex-col gap-2">
+                  {/* Producto al que pertenece la reseña */}
+                  {r.product && (
+                    <button onClick={() => navigate(`/products/${r.product._id}`)}
+                      className="flex items-center gap-2 text-left hover:opacity-80 transition-opacity">
+                      {r.product.images?.[0] && (
+                        <img src={r.product.images[0]} alt=""
+                          className="w-8 h-8 rounded-lg object-cover flex-shrink-0" />
+                      )}
+                      <p className="text-xs font-medium truncate" style={{ color: 'var(--color-accent)' }}>
+                        📦 {r.product.title} →
+                      </p>
+                    </button>
+                  )}
                   <div className="flex items-center gap-3">
-                    <div className="w-8 h-8 rounded-full flex items-center justify-center font-bold text-white text-sm flex-shrink-0"
+                    <div className="w-8 h-8 rounded-full flex items-center justify-center font-bold text-white text-xs flex-shrink-0"
                       style={{ backgroundColor: 'var(--color-primary)' }}>
                       {r.reviewer?.name?.charAt(0).toUpperCase()}
                     </div>
@@ -176,11 +173,18 @@ const SellerPage = () => {
                         {'★'.repeat(r.rating)}{'☆'.repeat(5-r.rating)}
                       </div>
                     </div>
-                    <p className="text-xs text-gray-400">
+                    <p className="text-[10px] text-gray-400">
                       {new Date(r.createdAt).toLocaleDateString('es-CO', { day:'2-digit', month:'short' })}
                     </p>
                   </div>
                   {r.comment && <p className="text-sm text-gray-600 pl-11">{r.comment}</p>}
+                  {r.photos?.length > 0 && (
+                    <div className="flex gap-2 pl-11 flex-wrap">
+                      {r.photos.map((src, i) => (
+                        <img key={i} src={src} alt="" className="w-16 h-16 object-cover rounded-xl" />
+                      ))}
+                    </div>
+                  )}
                 </div>
               ))}
             </div>
@@ -188,13 +192,8 @@ const SellerPage = () => {
         )}
       </div>
 
-      {/* Modal reportar vendedor */}
       {showReport && (
-        <ReportModal
-          targetId={id}
-          targetType="user"
-          onClose={() => setShowReport(false)}
-        />
+        <ReportModal targetId={id} targetType="user" onClose={() => setShowReport(false)} />
       )}
     </Layout>
   );
